@@ -2,6 +2,7 @@ flask
 langchain-openai
 langchain
 langchain-core
+langchain_huggingface
 python-dotenv
 openai
 flask-cors 

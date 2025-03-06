@@ -25,6 +25,8 @@ FILE_PATH_IGNORE_REGEX = [
     r".*/Archive/.*",   # Ignore archived files
     r".*/Weekly-Meetings/.*", # Ignore weekly meeting files
     r".*/Meeting-notes/.*", # Ignore meeting notes files
+    r".*/.*\(Archived\).*",  # Ignore files with (Archived) in the path
+    r".*/Weekly/.*",  # Ignore files with Weekly in the path
 ]
 
 # Concurrency settings

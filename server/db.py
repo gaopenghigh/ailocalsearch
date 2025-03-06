@@ -11,6 +11,11 @@ from langchain.text_splitter import MarkdownHeaderTextSplitter
 import concurrent.futures
 import glob
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Import configuration settings
 try:
     # When imported as a package
@@ -148,7 +153,13 @@ def _build_vector_db(data_dir: str, file_path_ignore_regex: list[str] = FILE_PAT
         chunks = text_splitter.split_text(doc.page_content)
         for chunk in chunks:
             chunk.metadata["title"] = os.path.basename(doc.metadata["source"])
-            chunk.metadata["source"] = doc.metadata["source"]
+            # Convert source path to relative path by removing the base directory prefix
+            source = doc.metadata["source"]
+            if source.startswith(DATA_RAW_DIR):
+                source = os.path.relpath(source, DATA_RAW_DIR)
+            elif source.startswith(DATA_SUMMARY_DIR):
+                source = os.path.relpath(source, DATA_SUMMARY_DIR)
+            chunk.metadata["source"] = source
             all_chunks.append(chunk)
 
     os.makedirs(DATA_DB_DIR, exist_ok=True)
@@ -173,6 +184,7 @@ def search(vector_store: Chroma, query: str, k: int = 50) -> str:
     references = {}
     for doc in docs:
         source = doc.metadata["source"]
+        logging.info(f"Processing {source}")
         ref = {}
         if _is_filepath_a_summary_doc(source):
             ref["source"] = _get_original_doc_path(source)
@@ -192,21 +204,21 @@ def search(vector_store: Chroma, query: str, k: int = 50) -> str:
     return result
 
 
-def _get_summary_doc_path(original_doc_path: str) -> str:
-    """replace the prefix RAW_DATA_DIR with SUMMARY_DIR in the original_doc_path"""
-    return original_doc_path.replace(DATA_RAW_DIR, DATA_SUMMARY_DIR)
+def _get_summary_doc_path(source: str) -> str:
+    """Replace the prefix DATA_RAW_DIR with DATA_SUMMARY_DIR in the source path."""
+    return os.path.join(DATA_SUMMARY_DIR, source)
 
-def _get_original_doc_path(summary_doc_path: str) -> str:
-    """replace the prefix SUMMARY_DIR with RAW_DATA_DIR in the summary_doc_path"""
-    return summary_doc_path.replace(DATA_SUMMARY_DIR, DATA_RAW_DIR)
+def _get_original_doc_path(source: str) -> str:
+    """Replace the prefix DATA_SUMMARY_DIR with DATA_RAW_DIR in the source path."""
+    return os.path.join(DATA_RAW_DIR, source)
 
-def _get_summary_doc_content(summary_doc_path: str) -> str:
+def _get_summary_doc_content(source: str) -> str:
     """get the content of the summary doc"""
-    return _get_file_content(summary_doc_path)
+    return _get_file_content(_get_summary_doc_path(source))
 
-def _get_original_doc_content(original_doc_path: str) -> str:
+def _get_original_doc_content(source: str) -> str:
     """get the content of the original doc"""
-    return _get_file_content(original_doc_path)
+    return _get_file_content(_get_original_doc_path(source))
 
 def _get_file_content(file_path: str) -> str:
     """get the content of the file, return None if the file does not exist"""
@@ -223,3 +235,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     build_summaries()
     build_vector_db()
+    vector_store = get_vector_store()
+    print(search(vector_store, "AKS", 5))
+

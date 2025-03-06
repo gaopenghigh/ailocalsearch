@@ -62,34 +62,6 @@ A simple local search application based on AI.
 cd server && tar xvzf ~/Downloads/data_20250305.tar.gz
 ``` 
 
-### Running the Application
-
-You can run the application using the provided start script:
-
-```
-chmod +x start.sh  # Make the script executable (if needed)
-./start.sh start
-```
-
-This will start the server that hosts both the backend API and the frontend interface. The application will be available at http://localhost:5001.
-
-### Other Commands
-
-- Check the application status:
-  ```
-  ./start.sh status
-  ```
-
-- Stop the application:
-  ```
-  ./start.sh stop
-  ```
-
-- Restart the application:
-  ```
-  ./start.sh restart
-  ```
-
 ## Development
 
 ### Frontend Development
@@ -110,6 +82,13 @@ cd web
 npm start
 ```
 This will start a development server at http://localhost:3000 that automatically reloads when you make changes. Note that the API calls will still go to the backend server at http://localhost:5001.
+
+# Run
+
+```
+python server/app.py
+```
+Will listen to 5001 port.
 
 ## Note
 
