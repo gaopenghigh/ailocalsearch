@@ -50,7 +50,7 @@ function App() {
       setLoading(true);
       
       try {
-        const res = await fetch(`http://localhost:5001/api/answer?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/answer?query=${encodeURIComponent(query)}`);
         const data = await res.json();
         
         if (res.ok) {
@@ -153,6 +153,9 @@ function App() {
       }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: '#5f6368' }}>
+            <div style={{ marginBottom: '15px' }}>
+              <div className="spinner"></div>
+            </div>
             <p>Searching for answers...</p>
           </div>
         ) : (

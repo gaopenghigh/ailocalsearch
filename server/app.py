@@ -1,5 +1,5 @@
 import os
-from flask import Flask, Response, request, jsonify
+from flask import Flask, Response, request, jsonify, send_from_directory
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import create_openai_functions_agent, AgentExecutor
@@ -15,7 +15,10 @@ logging.basicConfig(level=logging.INFO)
 # Load environment variables from .env file
 load_dotenv()
 
-app = Flask(__name__)
+# Set up the path to the React build directory
+react_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'web', 'build'))
+
+app = Flask(__name__, static_folder=react_build_dir)
 CORS(app)
 
 llm = ChatOpenAI(
@@ -27,7 +30,7 @@ vector_store = db.get_vector_store()
 
 
 @tool
-def answer_question_by_search(question):
+def search(question: str) -> str:
     """
     This tool is used to answer questions by searching through available documentation from local knowledge base.
     Args:
@@ -35,58 +38,36 @@ def answer_question_by_search(question):
     Returns:
         A string containing the search results
     """
-    search_results = db.search(vector_store, question, 20)
-    prompt = f"""
-    You are an AI assistant to help answer questions based on local knowledge.
-    Answer the following question based on the provided information.
-    If you don't know the answer based on the provided information, say so.
-    Do not make up information.
-    
-    QUESTION: {question}
-    
-    INFORMATION:
-    {search_results}
-    
-    Please provide a clear and accurate answer based solely on the information provided, in 3 segments:
-    1. Summary of the answer
-    2. Detailed answer, with all the details
-    3. Sources
-    """
-    logging.info(search_results)
-    response = llm.invoke(prompt)
-    return response.content
+    return db.search(vector_store, question, 20)
 
 
 def new_search_agent():
     # Define the system prompt
-    system_prompt = f"""
-    Your are {AI_ASSISTANT_NAME}, AI assistant to answer questions based on local knowledge base.
-    {LOCAL_KNOWLEDGE_BASE_DESCRIPTION}
+    system_prompt = f"""Your are {AI_ASSISTANT_NAME}, an AI assistant to help to answer questions based on local knowledge base.
+{LOCAL_KNOWLEDGE_BASE_DESCRIPTION}
 
-    You help answer technical questions by using the search tool.
-    To answer a question:
-    1. Understand what the user is asking
-    2. Use the search tool to find relevant information
-    3. Generate a comprehensive answer
-    
-    Always use the tools provided, tools can be called multiple times if needed.
-    Do not make up information.
-    If you can't find relevant information, say so.
-    
-    Try your best to provide a clear and accurate answer based solely on the search results, in 3 parts
-    - Summary
-    - Detail, don't miss any details
-    - Sources
-    """
-    
+Always use tools to answer technical questions, tools can be called multiple times if needed.
+Do not make up information.
+If you can't find relevant information, say so.
+
+To answer a question:
+1. Understand what the user is asking
+2. Use the search tool to find relevant information
+3. Generate a comprehensive answer
+
+Try your best to provide a clear and accurate answer based solely on the search results, in 3 parts
+- Summary
+- Detail, don't miss any details
+- Sources (extract the "Source" part of the search results, it's a file path, not a link)
+"""    
     # Create the prompt template
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ("human", "{input}")
+        ("human", "QUESTION: {input}")
     ])
 
-    tools = [answer_question_by_search]
+    tools = [search]
     agent = create_openai_functions_agent(llm, tools, prompt)
     agent_executor = AgentExecutor(
         agent=agent,
@@ -109,6 +90,17 @@ def answer():
         "response": result,
         "ai_assistant_name": AI_ASSISTANT_NAME
     })
+
+
+# Serve React App - static files
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
