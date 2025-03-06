@@ -54,6 +54,14 @@ A simple local search application based on AI.
    cd ..
    ```
 
+### Download and install the data
+
+```
+# Download to ~/Downloads/data_20250305.tar.gz
+# untar into server/
+cd server && tar xvzf ~/Downloads/data_20250305.tar.gz
+``` 
+
 ### Running the Application
 
 You can run the application using the provided start script:
