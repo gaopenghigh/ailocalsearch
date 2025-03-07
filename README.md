@@ -44,6 +44,7 @@ A simple local search application based on AI.
 
 1. Install frontend dependencies:
    ```
+   brew install node
    cd web
    npm install
    ```

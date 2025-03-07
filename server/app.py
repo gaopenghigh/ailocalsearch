@@ -38,7 +38,7 @@ def search(question: str) -> str:
     Returns:
         A string containing the search results
     """
-    return db.search(vector_store, question, 20)
+    return db.search(vector_store, question, 50)
 
 
 def new_search_agent():
@@ -46,7 +46,7 @@ def new_search_agent():
     system_prompt = f"""Your are {AI_ASSISTANT_NAME}, an AI assistant to help to answer questions based on local knowledge base.
 {LOCAL_KNOWLEDGE_BASE_DESCRIPTION}
 
-Always use tools to answer technical questions, tools can be called multiple times if needed.
+Always use tools to answer technical questions.
 Do not make up information.
 If you can't find relevant information, say so.
 
