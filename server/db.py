@@ -184,22 +184,16 @@ def search(vector_store: Chroma, query: str, k: int = 50) -> str:
     references = {}
     for doc in docs:
         source = doc.metadata["source"]
-        logging.info(f"Processing {source}")
-        ref = {}
-        if _is_filepath_a_summary_doc(source):
-            ref["source"] = _get_original_doc_path(source)
-            ref["summary"] = _get_summary_doc_content(source)
-        else:
-            ref["source"] = source
-            summary_doc_path = _get_summary_doc_path(source)
-            ref["summary"] = _get_summary_doc_content(summary_doc_path)
-        if ref["source"] not in references:
-            references[ref["source"]] = ref
-    
+        # Ignore if source already in references
+        if source in references:
+            continue
+        summary = _get_summary_doc_content(_get_summary_doc_path(source))
+        references[source] = summary
+    logging.info(f"Found {len(references)} references")
     result = ""
-    for source, ref in references.items():
+    for source, summary in references.items():
         source = source.replace(DATA_RAW_DIR, "").replace(DATA_SUMMARY_DIR, "")
-        result += f"Source: {source}\n\n{ref['summary']}\n"
+        result += f"Source: {source}\n\n{summary}\n"
         result += "\n----\n\n"
     return result
 

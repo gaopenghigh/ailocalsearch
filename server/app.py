@@ -55,7 +55,7 @@ To answer a question:
 2. Use the search tool to find relevant information
 3. Generate a comprehensive answer
 
-Try your best to provide a clear and accurate answer based solely on the search results, in 3 parts
+Provide a clear and accurate answer based solely on the search results, in 3 parts
 - Summary
 - Detail, don't miss any details
 - Sources (extract the "Source" part of the search results, it's a file path, not a link)
