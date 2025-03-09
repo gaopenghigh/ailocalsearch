@@ -34,4 +34,9 @@ FILE_PATH_IGNORE_REGEX = [
 DEFAULT_MAX_WORKERS = 5  # Default number of parallel workers for summary generation
 
 # Vector store search settings
-VECTOR_STORE_SEARCH_TOP_K = 5
+VECTOR_STORE_SEARCH_TOP_K = 50
+
+# HTTP server settings
+HTTP_SERVER_HOST = '0.0.0.0'
+HTTP_SERVER_PORT = 5001
+DEBUG_MODE = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t", "yes")
