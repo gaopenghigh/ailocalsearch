@@ -1,14 +1,22 @@
-import os
-from flask import Flask, Response, request, jsonify, send_from_directory
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_openai_functions_agent, AgentExecutor
-from langchain.tools import tool
-from flask_cors import CORS
-from dotenv import load_dotenv
+# Standard library imports
 import logging
+import os
+from typing import Any, Iterator
+import json
+
+# Third-party imports
+from dotenv import load_dotenv
+from flask import Flask, Response, jsonify, request, send_from_directory
+from flask_cors import CORS
+from langchain.tools import tool
+from langchain_core.runnables import Runnable
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+
+# Local imports
 import db
-from config import AI_ASSISTANT_NAME, LOCAL_KNOWLEDGE_BASE_DESCRIPTION
+from config import AI_ASSISTANT_NAME, LOCAL_KNOWLEDGE_BASE_DESCRIPTION, VECTOR_STORE_SEARCH_TOP_K
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
@@ -22,28 +30,32 @@ app = Flask(__name__, static_folder=react_build_dir)
 CORS(app)
 
 llm = ChatOpenAI(
-    model="gpt-4o", 
+    model="gpt-4o-mini", 
     streaming=False  # Changed to False since we don't need streaming
 )
 
-vector_store = db.get_vector_store()
+# Set debug mode based on environment variable
+debug = os.environ.get("DEBUG", "False").lower() in ("true", "1", "t", "yes")
 
+vector_store = db.get_vector_store()
 
 @tool
 def search(question: str) -> str:
     """
     This tool is used to answer questions by searching through available documentation from local knowledge base.
     Args:
-        query: The question to answer
+        question: The question to answer
     Returns:
         A string containing the search results
     """
-    return db.search(vector_store, question, 50)
+    return db.search(vector_store, question, VECTOR_STORE_SEARCH_TOP_K)
 
 
-def new_search_agent():
-    # Define the system prompt
-    system_prompt = f"""Your are {AI_ASSISTANT_NAME}, an AI assistant to help to answer questions based on local knowledge base.
+def create_answer_agent() -> Runnable:
+    """
+    Create a graph that can answer questions based on local knowledge base.
+    """
+    prompt = f"""Your are {AI_ASSISTANT_NAME}, an AI assistant to help to answer questions based on local knowledge base.
 {LOCAL_KNOWLEDGE_BASE_DESCRIPTION}
 
 Always use tools to answer technical questions.
@@ -52,45 +64,68 @@ If you can't find relevant information, say so.
 
 To answer a question:
 1. Understand what the user is asking
-2. Use the search tool to find relevant information
+2. Use the search tool to find relevant information, try to call it multiple times with different queries if needed
 3. Generate a comprehensive answer
 
-Provide a clear and accurate answer based solely on the search results, in 3 parts
+Provide answer based solely on the search results, in 3 parts
 - Summary
-- Detail, don't miss any details
+- Detail, be comprehensive, verbose, detailed and accurate, include examples if needed
 - Sources (extract the "Source" part of the search results, it's a file path, not a link)
-"""    
-    # Create the prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ("human", "QUESTION: {input}")
-    ])
-
+"""
     tools = [search]
-    agent = create_openai_functions_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        handle_parsing_errors=True
-    )
-    return agent_executor
+    return create_react_agent(llm, tools, prompt=prompt, debug=debug)
 
 
-@app.route('/api/answer', methods=['GET'])
-def answer():
-    query = request.args.get('query')
+def _get_answer(query: str, history=None) -> str:
+    agent = create_answer_agent()
+    messages = []
+    
+    # Add conversation history if provided
+    if history and isinstance(history, list):
+        for entry in history:
+            if 'question' in entry and 'answer' in entry:
+                messages.append(("human", entry['question']))
+                messages.append(("assistant", entry['answer']))
+    
+    # Add the current query
+    messages.append(("human", query))
+    
+    # Invoke the agent with the messages
+    a = agent.invoke({"messages": messages})
+    return a["messages"][-1].content
+
+# API Endpoints
+@app.route('/api/answer', methods=['POST'])
+def api_answer():
+    data = request.json
+    query = data.get('query', '')
+    history = data.get('history', [])
+    
     if not query:
         return jsonify({"error": "No query provided"}), 400
-
-    agent_executor = new_search_agent()
-    result = agent_executor.invoke({"input": query})
+    
+    answer = _get_answer(query, history)
+    
+    # Add the new Q&A pair to history
+    history.append({
+        "question": query,
+        "answer": answer
+    })
+    
     return jsonify({
-        "response": result,
-        "ai_assistant_name": AI_ASSISTANT_NAME
+        "question": query,
+        "answer": answer,
+        "history": history
     })
 
+# Add API endpoint to get assistant description
+@app.route('/api/description', methods=['GET'])
+def api_description():
+    """Return the description of this assistant."""
+    return jsonify({
+        "name": AI_ASSISTANT_NAME,
+        "description": LOCAL_KNOWLEDGE_BASE_DESCRIPTION
+    })
 
 # Serve React App - static files
 @app.route('/', defaults={'path': ''})

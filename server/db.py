@@ -4,7 +4,7 @@ import re
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain.text_splitter import MarkdownHeaderTextSplitter
 
@@ -48,7 +48,8 @@ def get_embeddings():
 def _generate_summary(content: str) -> str:
     """Generate a summary of content using GPT-4o-mini."""
     llm = ChatOpenAI(model_name="gpt-4o-mini")
-    prompt = """You are a helpful assistant that creates concise summaries of technical documents. Please create a concise summary of the following document. Focus on the main points and key information.
+    prompt = """You are a helpful assistant that creates concise summaries of technical documents.
+Please create a concise summary of the following document. Focus on the main points and key information.
         
 DOCUMENT:
 {content}
@@ -150,16 +151,12 @@ def _build_vector_db(data_dir: str, file_path_ignore_regex: list[str] = FILE_PAT
     
     all_chunks = []
     for doc in documents:
+        source = doc.metadata["source"]
+        title = os.path.basename(source)
         chunks = text_splitter.split_text(doc.page_content)
         for chunk in chunks:
-            chunk.metadata["title"] = os.path.basename(doc.metadata["source"])
-            # Convert source path to relative path by removing the base directory prefix
-            source = doc.metadata["source"]
-            if source.startswith(DATA_RAW_DIR):
-                source = os.path.relpath(source, DATA_RAW_DIR)
-            elif source.startswith(DATA_SUMMARY_DIR):
-                source = os.path.relpath(source, DATA_SUMMARY_DIR)
-            chunk.metadata["source"] = source
+            chunk.metadata["title"] = title
+            chunk.metadata["source"] = _get_source_relative_path(source)
             all_chunks.append(chunk)
 
     os.makedirs(DATA_DB_DIR, exist_ok=True)
@@ -170,8 +167,17 @@ def _build_vector_db(data_dir: str, file_path_ignore_regex: list[str] = FILE_PAT
     )
 
 
+def _get_source_relative_path(source: str) -> str:
+    """get the relative path of the source"""
+    if source.startswith(DATA_RAW_DIR):
+        return os.path.relpath(source, DATA_RAW_DIR)
+    elif source.startswith(DATA_SUMMARY_DIR):
+        return os.path.relpath(source, DATA_SUMMARY_DIR)
+    return source
+
 def get_vector_store(persist_directory: str = DATA_DB_DIR) -> Chroma:
     """Get an existing Chroma vector store."""
+    logging.info(f"Loading vector store from {persist_directory}")
     return Chroma(
         embedding_function=get_embeddings(),
         persist_directory=persist_directory,
@@ -180,49 +186,25 @@ def get_vector_store(persist_directory: str = DATA_DB_DIR) -> Chroma:
 def search(vector_store: Chroma, query: str, k: int = 50) -> str:
     logging.info(f"Searching for {query}")
     docs = vector_store.similarity_search(query, k=k)
-    
-    references = {}
-    for doc in docs:
-        source = doc.metadata["source"]
-        # Ignore if source already in references
-        if source in references:
-            continue
-        summary = _get_summary_doc_content(_get_summary_doc_path(source))
-        references[source] = summary
+    sources = {doc.metadata["source"] for doc in docs}
+    references = {source : _get_summary_doc_content(source) for source in sources}
     logging.info(f"Found {len(references)} references")
-    result = ""
-    for source, summary in references.items():
-        source = source.replace(DATA_RAW_DIR, "").replace(DATA_SUMMARY_DIR, "")
-        result += f"Source: {source}\n\n{summary}\n"
-        result += "\n----\n\n"
-    return result
+    return "\n\n----\n\n".join(f"Source: {source}\n\n{summary}" for source, summary in references.items())
 
-
-def _get_summary_doc_path(source: str) -> str:
-    """Replace the prefix DATA_RAW_DIR with DATA_SUMMARY_DIR in the source path."""
-    return os.path.join(DATA_SUMMARY_DIR, source)
-
-def _get_original_doc_path(source: str) -> str:
-    """Replace the prefix DATA_SUMMARY_DIR with DATA_RAW_DIR in the source path."""
-    return os.path.join(DATA_RAW_DIR, source)
 
 def _get_summary_doc_content(source: str) -> str:
     """get the content of the summary doc"""
-    return _get_file_content(_get_summary_doc_path(source))
+    return _get_file_content(os.path.join(DATA_SUMMARY_DIR, source))
 
 def _get_original_doc_content(source: str) -> str:
     """get the content of the original doc"""
-    return _get_file_content(_get_original_doc_path(source))
+    return _get_file_content(os.path.join(DATA_RAW_DIR, source))
 
 def _get_file_content(file_path: str) -> str:
     """get the content of the file, return None if the file does not exist"""
     if not os.path.exists(file_path):
         return None
     return open(file_path, "r").read()
-
-def _is_filepath_a_summary_doc(file_path: str) -> bool:
-    """check if the file path is a summary doc"""
-    return file_path.startswith(DATA_SUMMARY_DIR)
 
 
 if __name__ == "__main__":

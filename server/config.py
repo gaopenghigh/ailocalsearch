@@ -10,7 +10,8 @@ AI_ASSISTANT_NAME = "AKS Wiki Assistant"
 
 # this will be part of the system prompt
 LOCAL_KNOWLEDGE_BASE_DESCRIPTION = """
-This knowledge base contains AKS internal wikis, TSG docs, and personal wikis.
+This knowledge base is owned by AKS (Azure Kubernetes Service) engineering team, used to share technical details of AKS.
+It contains internal wikis, TSG docs, and personal wikis, all are technical documents.
 """
 
 # Directory paths
@@ -31,3 +32,6 @@ FILE_PATH_IGNORE_REGEX = [
 
 # Concurrency settings
 DEFAULT_MAX_WORKERS = 5  # Default number of parallel workers for summary generation
+
+# Vector store search settings
+VECTOR_STORE_SEARCH_TOP_K = 5

@@ -1,138 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './App.css';
 
-// Utility function to decode URLs within content
-const decodeUrlsInContent = (content) => {
-  if (!content) return content;
-  
-  // This regex looks for URLs or URL-encoded patterns
-  return content.replace(/(https?:\/\/[^\s]+)|(www\.[^\s]+)|(%[0-9A-Fa-f]{2})/g, (match) => {
-    try {
-      // Check if it's a URL-encoded character
-      if (match.startsWith('%')) {
-        return decodeURIComponent(match);
-      }
-      // For full URLs, try to decode them while preserving the URL structure
-      if (match.startsWith('http') || match.startsWith('www')) {
-        // Decode the URL but preserve essential encoded characters
-        // This prevents breaking valid URLs
-        return decodeURIComponent(match.replace(/\%([0-9A-F]{2})/g, (_, hex) => {
-          const code = parseInt(hex, 16);
-          // Don't decode essential URL characters
-          if ([33, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 58, 59, 61, 63, 64, 91, 93, 95].includes(code)) {
-            return '%' + hex;
-          }
-          return String.fromCharCode(code);
-        }));
-      }
-      return match;
-    } catch (e) {
-      console.warn('Failed to decode URL:', match, e);
-      return match;
-    }
-  });
-};
-
 function App() {
   const [inputQuery, setInputQuery] = useState('');
+  const [followUpQuery, setFollowUpQuery] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [assistantName, setAssistantName] = useState('AI Local Knowledge Search');
+  const [history, setHistory] = useState([]);
+  const [isNewAnswer, setIsNewAnswer] = useState(false);
+  const conversationEndRef = useRef(null);
+  
+  // Define base URL for API calls - use absolute URL in development, relative in production
+  const baseUrl = process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:5001' 
+    : '';
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Fetch assistant description when component mounts
+  useEffect(() => {
+    fetch(`${baseUrl}/api/description`)
+      .then(response => response.json())
+      .then(data => {
+        setAssistantName(data.name);
+        document.title = data.name; // Update the page title as well
+      })
+      .catch(error => {
+        console.error('Error fetching assistant description:', error);
+      });
+  }, [baseUrl]);
+
+  // Modify the useEffect to only scroll when follow-up box appears
+  useEffect(() => {
+    // Only scroll if we have history and we're not loading (same condition as follow-up box display)
+    if (history.length > 0 && !loading) {
+      scrollToBottom();
+    }
+  }, [history, loading]);
+
+  // Add animation effect for new answers
+  useEffect(() => {
+    if (response && !loading) {
+      setIsNewAnswer(true);
+      const timer = setTimeout(() => {
+        setIsNewAnswer(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [response, loading]);
+
+  const scrollToBottom = () => {
+    // Scroll the entire viewport instead of just the conversation container
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth'
+    });
+    
+    // Also scroll the conversation end ref as a fallback
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const sendQuery = (query, isFollowUp = false) => {
+    if (query) {
+      setLoading(true);
+      setResponse(''); // Clear any previous response
+      
+      const requestData = {
+        query: query,
+        history: history
+      };
+      
+      // Use POST instead of GET
+      fetch(`${baseUrl}/api/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          setResponse(data.answer);
+          setLoading(false);
+          
+          // Update with history from server response
+          if (data.history && Array.isArray(data.history)) {
+            setHistory(data.history);
+          } else {
+            // Fallback if server doesn't return history
+            const newEntry = {
+              question: query,
+              answer: data.answer
+            };
+            setHistory(prevHistory => [...prevHistory, newEntry]);
+          }
+          
+          // Clear the input fields
+          if (isFollowUp) {
+            setFollowUpQuery('');
+          } else {
+            setInputQuery('');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching answer:', error);
+          setResponse(`Error: ${error.message}`);
+          setLoading(false);
+        });
+    }
+  };
+
+  const handleAnswer = (e) => {
+    e.preventDefault(); 
     const formData = new FormData(e.target);
     const query = formData.get('query');
     
     if (query) {
       setInputQuery(query);
-      setLoading(true);
-      
-      try {
-        const res = await fetch(`/api/answer?query=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        
-        if (res.ok) {
-          // Process response to decode URLs while preserving markdown
-          const processedOutput = decodeUrlsInContent(data.response.output);
-          setResponse(processedOutput);
-          
-          // Set the assistant name if available
-          if (data.ai_assistant_name) {
-            setAssistantName(data.ai_assistant_name);
-          }
-        } else {
-          setResponse(`Error: ${data.error || 'Failed to get response'}`);
-        }
-      } catch (error) {
-        setResponse(`Error: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
+      sendQuery(query);
+    }
+  };
+
+  const handleFollowUp = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const query = formData.get('followUpQuery');
+    
+    if (query) {
+      setFollowUpQuery(query);
+      sendQuery(query, true);
     }
   };
 
   return (
-    <div className="App" style={{
-      fontFamily: "'Roboto', 'Arial', sans-serif",
-      maxWidth: '800px',
-      margin: '0 auto',
-      padding: '40px 20px',
-      color: '#202124'
-    }}>
-      <h1 style={{
-        fontSize: '28px',
-        fontWeight: '400',
-        marginBottom: '30px',
-        color: '#5f6368',
-        textAlign: 'center'
-      }}>{assistantName}</h1>
+    <div className="App">
+      <h1 className="app-title">{assistantName}</h1>
       
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        marginBottom: '40px'
-      }}>
-        <form onSubmit={handleSubmit} style={{
-          width: '100%',
-          maxWidth: '600px',
-          position: 'relative'
-        }}>
-          <div style={{
-            display: 'flex',
-            boxShadow: '0 1px 6px rgba(32,33,36,.28)',
-            borderRadius: '24px',
-            padding: '8px 16px',
-            alignItems: 'center'
-          }}>
+      {/* Initial query input */}
+      <div className="centered-container">
+        <form onSubmit={handleAnswer} className="form-container">
+          <div className="search-box">
             <input
               type="text"
               name="query"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
               placeholder="Ask a question about local knowledge..."
-              style={{
-                width: '100%',
-                padding: '12px 0',
-                fontSize: '16px',
-                border: 'none',
-                outline: 'none'
-              }}
+              className="search-input"
             />
             <button 
               type="submit" 
               disabled={loading}
-              style={{
-                background: loading ? '#f1f3f4' : '#4285f4',
-                color: loading ? '#80868b' : 'white',
-                border: 'none',
-                borderRadius: '24px',
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: loading ? 'default' : 'pointer',
-                marginLeft: '10px',
-                transition: 'background-color 0.2s'
-              }}
+              className={`search-button ${loading ? 'disabled' : ''}`}
             >
               {loading ? 'Loading...' : 'Search'}
             </button>
@@ -140,32 +164,77 @@ function App() {
         </form>
       </div>
       
-      <div style={{
-        backgroundColor: loading ? '#f8f9fa' : 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-        minHeight: '200px',
-        textAlign: 'left',
-        fontSize: '15px',
-        lineHeight: '1.6',
-        color: '#202124'
-      }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', color: '#5f6368' }}>
-            <div style={{ marginBottom: '15px' }}>
+      {/* Conversation history */}
+      <div className="conversation-container">
+        {history.length > 0 ? (
+          <div className="conversation-history">
+            {history.map((entry, index) => (
+              <div key={index} className={index === history.length - 1 && isNewAnswer ? 'fade-in' : ''}>
+                <div className="question-box">
+                  <p className="question-label">
+                    <span role="img" aria-label="question">❓</span> You asked:
+                  </p>
+                  <p className="question-text">{entry.question}</p>
+                </div>
+                <div className="answer-box">
+                  <p className="answer-label">
+                    <span role="img" aria-label="answer">💡</span> Answer:
+                  </p>
+                  {index === history.length - 1 && isNewAnswer ? (
+                    <div className="typewriter-text">
+                      <ReactMarkdown>
+                        {entry.answer}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <ReactMarkdown>
+                      {entry.answer}
+                    </ReactMarkdown>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : 'Enter a query to get started.'}
+        
+        {/* Loading indicator */}
+        {loading && (
+          <div className="loading-container">
+            <div className="loading-spinner-container">
               <div className="spinner"></div>
             </div>
             <p>Searching for answers...</p>
           </div>
-        ) : (
-          response ? (
-            <ReactMarkdown>
-              {response}
-            </ReactMarkdown>
-          ) : 'Enter a query to get started.'
         )}
+        
+        {/* Ref for scrolling */}
+        <div ref={conversationEndRef} className="scroll-ref" />
       </div>
+      
+      {/* Follow-up question input - only show after an answer is displayed */}
+      {history.length > 0 && !loading && (
+        <div className="followup-container">
+          <form onSubmit={handleFollowUp} className="form-container">
+            <div className="search-box">
+              <input
+                type="text"
+                name="followUpQuery"
+                value={followUpQuery}
+                onChange={(e) => setFollowUpQuery(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                className="search-input"
+              />
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="search-button"
+              >
+                Follow-up Search
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
