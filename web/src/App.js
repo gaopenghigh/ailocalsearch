@@ -137,33 +137,75 @@ function App() {
     }
   };
 
+  const handleNewChat = () => {
+    // Clear all conversation state
+    setInputQuery('');
+    setFollowUpQuery('');
+    setResponse('');
+    setHistory([]);
+    setIsNewAnswer(false);
+  };
+
   return (
     <div className="App">
       <h1 className="app-title">{assistantName}</h1>
       
-      {/* Initial query input */}
-      <div className="centered-container">
-        <form onSubmit={handleAnswer} className="form-container">
-          <div className="search-box">
-            <input
-              type="text"
-              name="query"
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
-              placeholder="Ask a question about local knowledge..."
-              className="search-input"
-            />
-            <button 
-              type="submit" 
-              disabled={loading}
-              className={`search-button ${loading ? 'disabled' : ''}`}
-            >
-              {loading ? 'Loading...' : 'Search'}
-            </button>
-          </div>
-        </form>
-      </div>
-      
+      {/* Google-style query input - only show when there's no history and not loading */}
+      {(history.length === 0 && !loading) && (
+        <div className="centered-container">
+          <form onSubmit={handleAnswer} className="form-container">
+            <div className="google-search-box">
+              <div className="search-icon">
+                <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#9aa0a6" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+                </svg>
+              </div>
+              <input
+                type="text"
+                name="query"
+                value={inputQuery}
+                onChange={(e) => setInputQuery(e.target.value)}
+                placeholder="Ask a question about local knowledge..."
+                className="google-search-input"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                autoCapitalize="off"
+              />
+              <div className="search-actions">
+                <button 
+                  type="button"
+                  onClick={handleNewChat}
+                  className="icon-button"
+                  title="Clear and start a new chat"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#4285f4">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="google-buttons">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="google-button"
+              >
+                {loading ? 'Loading...' : 'Search'}
+              </button>
+              <button 
+                type="button" 
+                onClick={handleNewChat}
+                className="google-button"
+              >
+                New Chat
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Conversation history */}
       <div className="conversation-container">
         {history.length > 0 ? (
@@ -171,15 +213,9 @@ function App() {
             {history.map((entry, index) => (
               <div key={index} className={index === history.length - 1 && isNewAnswer ? 'fade-in' : ''}>
                 <div className="question-box">
-                  <p className="question-label">
-                    <span role="img" aria-label="question">❓</span> You asked:
-                  </p>
                   <p className="question-text">{entry.question}</p>
                 </div>
                 <div className="answer-box">
-                  <p className="answer-label">
-                    <span role="img" aria-label="answer">💡</span> Answer:
-                  </p>
                   {index === history.length - 1 && isNewAnswer ? (
                     <div className="typewriter-text">
                       <ReactMarkdown>
@@ -211,25 +247,56 @@ function App() {
         <div ref={conversationEndRef} className="scroll-ref" />
       </div>
       
-      {/* Follow-up question input - only show after an answer is displayed */}
+      {/* Google-style follow-up input - only show after an answer is displayed */}
       {history.length > 0 && !loading && (
         <div className="followup-container">
           <form onSubmit={handleFollowUp} className="form-container">
-            <div className="search-box">
+            <div className="google-search-box">
+              <div className="search-icon">
+                <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="#9aa0a6" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+                </svg>
+              </div>
               <input
                 type="text"
                 name="followUpQuery"
                 value={followUpQuery}
                 onChange={(e) => setFollowUpQuery(e.target.value)}
                 placeholder="Ask a follow-up question..."
-                className="search-input"
+                className="google-search-input"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                autoCapitalize="off"
               />
+              <div className="search-actions">
+                <button 
+                  type="button"
+                  onClick={handleNewChat}
+                  className="icon-button"
+                  title="Clear and start a new chat"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#4285f4">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="google-buttons">
               <button 
                 type="submit" 
                 disabled={loading}
-                className="search-button"
+                className="google-button"
               >
                 Follow-up Search
+              </button>
+              <button 
+                type="button" 
+                onClick={handleNewChat}
+                className="google-button"
+              >
+                New Chat
               </button>
             </div>
           </form>

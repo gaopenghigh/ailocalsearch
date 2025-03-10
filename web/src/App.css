@@ -9,14 +9,15 @@ html, body {
 body {
   overflow-y: auto;
   scroll-behavior: smooth;
+  background-color: #ffffff; /* Changed to white for light theme */
 }
 
 .App {
   font-family: 'Roboto', 'Arial', sans-serif;
-  max-width: 800px;
+  max-width: 75%;
   margin: 0 auto;
   padding: 40px 20px;
-  color: #202124;
+  color: #202124; /* Changed to dark text for light background */
   min-height: 100vh;
   text-align: center;
   position: relative;
@@ -45,7 +46,7 @@ body {
 }
 
 .App-link {
-  color: #61dafb;
+  color: #1a73e8; /* Google blue for light theme */
 }
 
 @keyframes App-logo-spin {
@@ -62,14 +63,14 @@ body {
   font-size: 28px;
   font-weight: 400;
   margin-bottom: 30px;
-  color: #5f6368;
+  color: #202124; /* Updated for light mode */
   text-align: center;
 }
 
 /* Form Container */
 .form-container {
   width: 100%;
-  max-width: 600px;
+  max-width: 75%;
   position: relative;
 }
 
@@ -78,44 +79,107 @@ body {
   display: flex;
   justify-content: center;
   margin-bottom: 40px;
+  width: 100%;
 }
 
-/* Search Box */
-.search-box {
+/* Google Style Search Box */
+.google-search-box {
   display: flex;
-  box-shadow: 0 1px 6px rgba(32,33,36,.28);
+  background-color: #ffffff; /* Changed to white for light theme */
   border-radius: 24px;
   padding: 8px 16px;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+  border: 1px solid #dfe1e5; /* Light border for light theme */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Search Input */
-.search-input {
+.google-search-box:hover,
+.google-search-box:focus-within {
+  background-color: #ffffff;
+  border-color: #dfe1e5;
+  box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+}
+
+.search-icon {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+}
+
+.google-search-input {
   width: 100%;
   padding: 12px 0;
   font-size: 16px;
   border: none;
   outline: none;
+  background: transparent;
+  color: #202124; /* Changed to dark text for light theme */
+  flex: 1;
 }
 
-/* Search Button */
-.search-button {
-  background: #4285f4;
-  color: white;
+.google-search-input::placeholder {
+  color: #5f6368; /* Updated placeholder color for light theme */
+}
+
+.search-actions {
+  display: flex;
+  align-items: center;
+}
+
+.icon-button {
+  background: transparent;
   border: none;
-  border-radius: 24px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  margin-left: 10px;
-  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  margin-left: 8px;
 }
 
-.search-button:disabled {
-  background: #f1f3f4;
+.icon-button:hover {
+  background-color: rgba(32, 33, 36, 0.08); /* Updated for light theme */
+}
+
+.google-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  gap: 12px;
+}
+
+.google-button {
+  background-color: #f8f9fa; /* Google light button color */
+  color: #202124; /* Dark text for light buttons */
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  height: 36px;
+  min-width: 120px;
+  cursor: pointer;
+  display: flex; /* Added flex display for centering content */
+  align-items: center; /* Vertical centering */
+  justify-content: center; /* Horizontal centering */
+}
+
+.google-button:hover {
+  border-color: #dadce0;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
+  background-color: #f8f9fa;
+}
+
+.google-button:disabled {
+  background-color: #f1f3f4;
   color: #80868b;
   cursor: default;
+  border-color: #f1f3f4;
 }
 
 /* API Info */
@@ -129,51 +193,57 @@ body {
 
 /* Conversation Container */
 .conversation-container {
-  background-color: white;
+  background-color: transparent; /* Changed from light background to transparent */
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: none; /* Removed shadow for borderless look */
   min-height: 200px;
   text-align: left;
   font-size: 15px;
   line-height: 1.6;
-  color: #202124;
+  color: #202124; /* Dark text for light background */
   margin-bottom: 20px;
   overflow-y: visible;
+  width: 100%;
 }
 
 /* Question Box */
 .question-box {
-  background-color: #f8f9fa;
+  background-color: transparent; /* Removed the light blue background */
   padding: 10px 15px;
   border-radius: 8px;
-  margin-bottom: 15px;
+  margin-bottom: 5px; /* Reduced from 15px to 5px to decrease space between question and answer */
+  text-align: right; /* Align questions to the right */
 }
 
 /* Answer Box */
 .answer-box {
   padding: 10px 15px;
   margin-bottom: 20px;
+  color: #202124; /* Dark text */
+  text-align: left; /* Explicitly set answers to align left */
 }
 
 /* Question Label */
 .question-label {
   font-weight: 500;
   margin-bottom: 5px;
-  color: #1a73e8;
+  color: #1a73e8; /* Google blue */
+  display: none; /* Hide the "You asked" label */
 }
 
 /* Answer Label */
 .answer-label {
   font-weight: 500;
   margin-bottom: 5px;
-  color: #188038;
+  color: #34a853; /* Google green */
+  display: none; /* Hide the "Answer" label */
 }
 
 /* Loading Container */
 .loading-container {
   text-align: center;
-  color: #5f6368;
+  color: #5f6368; /* Google gray text */
   margin-top: 20px;
   margin-bottom: 40px;
 }
@@ -187,6 +257,7 @@ body {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+  width: 100%;
 }
 
 /* Loading Spinner */
@@ -194,9 +265,9 @@ body {
   display: inline-block;
   width: 50px;
   height: 50px;
-  border: 3px solid rgba(66, 133, 244, 0.2);
+  border: 3px solid rgba(26, 115, 232, 0.2); /* Light Google blue */
   border-radius: 50%;
-  border-top-color: #4285f4;
+  border-top-color: #1a73e8; /* Google blue */
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -233,7 +304,7 @@ body {
 
 @keyframes blink-caret {
   from, to { border-color: transparent; }
-  50% { border-color: #4285f4; }
+  50% { border-color: #1a73e8; /* Google blue */ }
 }
 
 /* Scroll reference */
@@ -248,4 +319,58 @@ body {
   font-weight: bold;
   margin-top: 8px;
   margin-bottom: 8px;
+  color: #202124; /* Dark text for light background */
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .App {
+    max-width: 95%;
+  }
+  
+  .form-container {
+    max-width: 100%;
+  }
+  
+  .google-search-box {
+    flex-wrap: wrap;
+  }
+  
+  .google-button {
+    margin-top: 10px;
+    min-width: 100px;
+  }
+}
+
+/* Add styles for markdown content in answer */
+.answer-box a {
+  color: #1a73e8; /* Google blue link color */
+  text-decoration: none;
+}
+
+.answer-box a:hover {
+  text-decoration: underline;
+}
+
+.answer-box pre {
+  background-color: #f1f3f4; /* Light background for code blocks */
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.answer-box code {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.9rem;
+}
+
+.answer-box ul, .answer-box ol {
+  padding-left: 20px;
+}
+
+.answer-box blockquote {
+  border-left: 3px solid #dadce0;
+  margin-left: 0;
+  padding-left: 15px;
+  color: #5f6368;
 }

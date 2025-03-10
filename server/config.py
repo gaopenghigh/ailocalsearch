@@ -6,7 +6,7 @@ This module contains constants and settings that can be adjusted without modifyi
 import os
 
 # this will be part of the system prompt
-AI_ASSISTANT_NAME = "AKS Wiki Assistant"
+AI_ASSISTANT_NAME = "AKS Wiki Assistant (2025 Feb)"
 
 # this will be part of the system prompt
 LOCAL_KNOWLEDGE_BASE_DESCRIPTION = """

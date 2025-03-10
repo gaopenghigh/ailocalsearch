@@ -1,9 +1,11 @@
 flask
-langchain-openai
+flask-cors
 langchain
-langchain-core
 langchain-chroma
+langchain-core
+langchain-openai
+langchain_community
 langchain_huggingface
-python-dotenv
+langgraph
 openai
-flask-cors 
+python-dotenv

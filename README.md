@@ -5,8 +5,8 @@ A simple local search application based on AI.
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Node.js 16 or higher and npm
+- Python 3.12 or higher
+- Node.js 23 or higher and npm
 - OpenAI API key
 
 ### Backend Setup
