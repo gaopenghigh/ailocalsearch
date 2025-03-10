@@ -192,14 +192,14 @@ function App() {
                 disabled={loading}
                 className="google-button"
               >
-                {loading ? 'Loading...' : 'Search'}
+                {loading ? 'Loading...' : 'Ask'}
               </button>
               <button 
                 type="button" 
                 onClick={handleNewChat}
                 className="google-button"
               >
-                New Chat
+                New
               </button>
             </div>
           </form>
@@ -289,14 +289,14 @@ function App() {
                 disabled={loading}
                 className="google-button"
               >
-                Follow-up Search
+                Ask
               </button>
               <button 
                 type="button" 
                 onClick={handleNewChat}
                 className="google-button"
               >
-                New Chat
+                New
               </button>
             </div>
           </form>
